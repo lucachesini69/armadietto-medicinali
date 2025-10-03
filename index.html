@@ -130,11 +130,17 @@
         import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- CONFIGURAZIONE E INIZIALIZZAZIONE ---
-        
-        // La configurazione di Firebase viene iniettata dall'ambiente di esecuzione
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Configurazione Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLcnuoX2OcRf9ldTOkMoo_AVeUO9NzhMw",
+            authDomain: "armadietto-medicinali.firebaseapp.com",
+            projectId: "armadietto-medicinali",
+            storageBucket: "armadietto-medicinali.firebasestorage.app",
+            messagingSenderId: "921240162931",
+            appId: "1:921240162931:web:3928618726d56386f41006",
+            measurementId: "G-GD0G28KQ86"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -265,7 +271,7 @@
         async function fetchMedicines() {
             if (unsubscribe) unsubscribe(); // Scollega il listener precedente se esiste
 
-            medicinesCollectionRef = collection(db, 'artifacts', appId, 'users', userId, 'medicines');
+            medicinesCollectionRef = collection(db, 'medicines');
             
             unsubscribe = onSnapshot(medicinesCollectionRef, (snapshot) => {
                 allMedicines = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -303,7 +309,7 @@
             try {
                 if (id) {
                     // Aggiorna medicinale esistente
-                    const docRef = doc(db, 'artifacts', appId, 'users', userId, 'medicines', id);
+                    const docRef = doc(db, 'medicines', id);
                     await setDoc(docRef, medicineData, { merge: true });
                 } else {
                     // Aggiungi nuovo medicinale
@@ -318,7 +324,7 @@
 
         async function deleteMedicine(id) {
             try {
-                const docRef = doc(db, 'artifacts', appId, 'users', userId, 'medicines', id);
+                const docRef = doc(db, 'medicines', id);
                 await deleteDoc(docRef);
             } catch (error) {
                 console.error("Errore nell'eliminazione del medicinale: ", error);
@@ -414,14 +420,9 @@
         // --- AVVIO APPLICAZIONE ---
         async function main() {
             try {
-                 if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                await signInAnonymously(auth);
                 userId = auth.currentUser.uid;
                 await fetchMedicines();
-
             } catch (error) {
                 console.error("Autenticazione fallita:", error);
                 loadingDiv.innerText = "Impossibile autenticare l'utente. Ricarica la pagina.";
