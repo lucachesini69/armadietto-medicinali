@@ -89,6 +89,10 @@
                                 <label for="pathologies" class="block text-sm font-medium text-gray-700 mb-1">Efficace per (es. mal di testa, febbre)</label>
                                 <input type="text" id="pathologies" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Separati da virgola">
                             </div>
+                            <div class="mb-4">
+                                <label for="dosage" class="block text-sm font-medium text-gray-700 mb-1">Come prendere</label>
+                                <input type="text" id="dosage" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="es. 2 volte al giorno prima dei pasti">
+                            </div>
                         </div>
                         <!-- Colonna destra -->
                         <div>
@@ -213,8 +217,9 @@
             let filteredMedicines = allMedicines.filter(med => {
                 const name = (med.name || '').toLowerCase();
                 const pathologies = (med.pathologies || '').toLowerCase();
+                const dosage = (med.dosage || '').toLowerCase();
                 const notes = (med.notes || '').toLowerCase();
-                return name.includes(searchTerm) || pathologies.includes(searchTerm) || notes.includes(searchTerm);
+                return name.includes(searchTerm) || pathologies.includes(searchTerm) || dosage.includes(searchTerm) || notes.includes(searchTerm);
             });
 
             // Ordinamento
@@ -258,6 +263,11 @@
                             <h4 class="font-semibold text-sm mb-2">Efficace per:</h4>
                             <div class="flex flex-wrap gap-1">${pathologiesHTML}</div>
                         </div>
+                        ${med.dosage ? `
+                        <div class="mt-4">
+                            <h4 class="font-semibold text-sm">Come prendere:</h4>
+                            <p class="text-sm text-gray-600 bg-blue-50 p-2 rounded-md">${med.dosage}</p>
+                        </div>` : ''}
                         ${med.notes ? `
                         <div class="mt-4">
                             <h4 class="font-semibold text-sm">Note:</h4>
@@ -295,10 +305,11 @@
             const name = document.getElementById('name').value;
             const expiryDate = document.getElementById('expiryDate').value;
             const pathologies = document.getElementById('pathologies').value;
+            const dosage = document.getElementById('dosage').value;
             const notes = document.getElementById('notes').value;
             const photoFile = document.getElementById('photo').files[0];
 
-            const medicineData = { name, expiryDate, pathologies, notes };
+            const medicineData = { name, expiryDate, pathologies, dosage, notes };
 
             // Gestione foto
             if (photoFile) {
@@ -382,8 +393,9 @@
                     document.getElementById('medicineId').value = med.id;
                     document.getElementById('name').value = med.name;
                     document.getElementById('expiryDate').value = med.expiryDate;
-                    document.getElementById('pathologies').value = med.pathologies;
-                    document.getElementById('notes').value = med.notes;
+                    document.getElementById('pathologies').value = med.pathologies || '';
+                    document.getElementById('dosage').value = med.dosage || '';
+                    document.getElementById('notes').value = med.notes || '';
                     const preview = document.getElementById('photoPreview');
                     if (med.photo) {
                         preview.src = med.photo;
