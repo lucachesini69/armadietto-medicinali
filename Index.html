@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestore Armadietto Medicinali</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .expired {
+            border-left-color: #ef4444; /* red-500 */
+        }
+        .expiring-soon {
+            border-left-color: #f97316; /* orange-500 */
+        }
+        .safe {
+            border-left-color: #22c55e; /* green-500 */
+        }
+        .sort-button.active {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Contenitore principale -->
+    <div class="container mx-auto p-4 md:p-6 lg:p-8 max-w-6xl">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-700">Il Tuo Armadietto dei Medicinali</h1>
+            <p class="text-gray-500 mt-2">Tieni traccia di scadenze, usi e disponibilità.</p>
+        </header>
+
+        <!-- Barra di ricerca e filtri -->
+        <div class="mb-6 flex flex-col sm:flex-row gap-4 items-center">
+            <input type="text" id="searchInput" placeholder="Cerca un medicinale..." class="w-full sm:flex-grow p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <div id="sort-buttons" class="flex gap-2">
+                <button data-sort="name" class="sort-button active p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">Nome</button>
+                <button data-sort="expiry" class="sort-button p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">Scadenza</button>
+            </div>
+        </div>
+
+        <!-- Griglia dei medicinali -->
+        <div id="medicinesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Le card dei medicinali verranno inserite qui da JavaScript -->
+        </div>
+        
+        <div id="loading" class="text-center py-10">
+            <p class="text-gray-500">Caricamento medicinali...</p>
+        </div>
+
+        <div id="no-medicines" class="text-center py-10 hidden">
+             <p class="text-gray-500">Nessun medicinale trovato. Clicca il pulsante '+' per aggiungerne uno.</p>
+        </div>
+
+    </div>
+
+    <!-- Pulsante Aggiungi -->
+    <button id="addMedicineBtn" class="fixed bottom-6 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-light hover:bg-blue-700 transition-transform transform hover:scale-110">
+        +
+    </button>
+
+    <!-- Modale per Aggiungere/Modificare Medicinali -->
+    <div id="medicineModal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop hidden">
+        <div id="modal-content" class="bg-white rounded-lg shadow-2xl p-6 md:p-8 w-11/12 max-w-2xl mx-auto transform scale-95 opacity-0 modal">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6">Aggiungi Medicinale</h2>
+            <form id="medicineForm">
+                <input type="hidden" id="medicineId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Colonna sinistra -->
+                    <div>
+                        <div class="mb-4">
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nome Medicinale</label>
+                            <input type="text" id="name" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="expiryDate" class="block text-sm font-medium text-gray-700 mb-1">Data di Scadenza</label>
+                            <input type="date" id="expiryDate" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="pathologies" class="block text-sm font-medium text-gray-700 mb-1">Efficace per (es. mal di testa, febbre)</label>
+                            <input type="text" id="pathologies" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Separati da virgola">
+                        </div>
+                    </div>
+                    <!-- Colonna destra -->
+                    <div>
+                        <div class="mb-4">
+                             <label for="photo" class="block text-sm font-medium text-gray-700 mb-1">Foto</label>
+                            <input type="file" id="photo" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            <img id="photoPreview" src="" alt="Anteprima foto" class="mt-2 rounded-md max-h-24 hidden">
+                        </div>
+                         <div class="mb-4">
+                            <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Note Aggiuntive</label>
+                            <textarea id="notes" rows="3" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" id="cancelBtn" class="py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Annulla</button>
+                    <button type="submit" class="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700">Salva</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modale di conferma eliminazione -->
+    <div id="deleteConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-11/12 max-w-sm mx-auto">
+            <h3 class="text-lg font-bold">Conferma Eliminazione</h3>
+            <p class="my-4">Sei sicuro di voler eliminare questo medicinale?</p>
+            <div class="flex justify-end gap-3">
+                <button id="cancelDeleteBtn" class="py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Annulla</button>
+                <button id="confirmDeleteBtn" class="py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700">Elimina</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Importa le funzioni necessarie dal SDK di Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIGURAZIONE E INIZIALIZZAZIONE ---
+        
+        // La configurazione di Firebase viene iniettata dall'ambiente di esecuzione
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Abilita i log di debug per Firestore
+        // setLogLevel('debug');
+
+        let userId = null;
+        let medicinesCollectionRef = null;
+        let unsubscribe = null; // Funzione per annullare l'ascolto dei dati
+        let allMedicines = [];
+        let currentSort = 'name';
+
+        // --- ELEMENTI DEL DOM ---
+        const medicinesGrid = document.getElementById('medicinesGrid');
+        const addMedicineBtn = document.getElementById('addMedicineBtn');
+        const medicineModal = document.getElementById('medicineModal');
+        const modalContent = document.getElementById('modal-content');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const medicineForm = document.getElementById('medicineForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const searchInput = document.getElementById('searchInput');
+        const sortButtons = document.getElementById('sort-buttons');
+        const loadingDiv = document.getElementById('loading');
+        const noMedicinesDiv = document.getElementById('no-medicines');
+        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+        // --- FUNZIONI DI GESTIONE MODALE ---
+        function openModal() {
+            medicineModal.classList.remove('hidden');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+            }, 10);
+        }
+
+        function closeModal() {
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                medicineModal.classList.add('hidden');
+                medicineForm.reset();
+                document.getElementById('photoPreview').classList.add('hidden');
+                document.getElementById('medicineId').value = '';
+            }, 300);
+        }
+
+        // --- FUNZIONI DI RENDER ---
+        function getExpiryStatus(expiryDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Ignora l'orario per il confronto
+            const expiry = new Date(expiryDate);
+            const diffTime = expiry - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) {
+                return { status: 'expired', text: `Scaduto da ${Math.abs(diffDays)} giorni`, class: 'expired', days: diffDays };
+            } else if (diffDays <= 30) {
+                return { status: 'expiring-soon', text: `Scade tra ${diffDays} giorni`, class: 'expiring-soon', days: diffDays };
+            } else {
+                return { status: 'safe', text: `Scade il ${expiry.toLocaleDateString('it-IT')}`, class: 'safe', days: diffDays };
+            }
+        }
+        
+        function renderMedicines() {
+            const searchTerm = searchInput.value.toLowerCase();
+            let filteredMedicines = allMedicines.filter(med => med.name.toLowerCase().includes(searchTerm));
+
+            // Ordinamento
+            filteredMedicines.sort((a, b) => {
+                if (currentSort === 'name') {
+                    return a.name.localeCompare(b.name);
+                } else if (currentSort === 'expiry') {
+                    const statusA = getExpiryStatus(a.expiryDate);
+                    const statusB = getExpiryStatus(b.expiryDate);
+                    return statusA.days - statusB.days;
+                }
+            });
+
+            medicinesGrid.innerHTML = '';
+            loadingDiv.classList.add('hidden');
+
+            if (filteredMedicines.length === 0) {
+                noMedicinesDiv.classList.remove('hidden');
+            } else {
+                noMedicinesDiv.classList.add('hidden');
+            }
+
+            filteredMedicines.forEach(med => {
+                const statusInfo = getExpiryStatus(med.expiryDate);
+                const pathologiesHTML = med.pathologies 
+                    ? med.pathologies.split(',').map(p => `<span class="bg-gray-200 text-gray-700 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full">${p.trim()}</span>`).join(' ')
+                    : '<span class="text-gray-400 text-sm">Nessuna indicazione</span>';
+                
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-lg shadow-md overflow-hidden border-l-4 ${statusInfo.class} flex flex-col`;
+                card.innerHTML = `
+                    <div class="p-5 flex-grow">
+                        <div class="flex items-start gap-4">
+                            <img src="${med.photo || 'https://placehold.co/80x80/e2e8f0/64748b?text=Foto'}" class="w-20 h-20 object-cover rounded-md bg-gray-200">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-gray-800">${med.name}</h3>
+                                <p class="text-sm font-semibold ${statusInfo.status === 'expired' ? 'text-red-600' : (statusInfo.status === 'expiring-soon' ? 'text-orange-600' : 'text-green-600')}">${statusInfo.text}</p>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <h4 class="font-semibold text-sm mb-2">Efficace per:</h4>
+                            <div class="flex flex-wrap gap-1">${pathologiesHTML}</div>
+                        </div>
+                        ${med.notes ? `
+                        <div class="mt-4">
+                            <h4 class="font-semibold text-sm">Note:</h4>
+                            <p class="text-sm text-gray-600 bg-gray-50 p-2 rounded-md">${med.notes}</p>
+                        </div>` : ''}
+                    </div>
+                    <div class="p-3 bg-gray-50 flex justify-end gap-2">
+                        <button data-id="${med.id}" class="edit-btn py-1 px-3 text-sm bg-yellow-400 text-yellow-900 rounded-md hover:bg-yellow-500">Modifica</button>
+                        <button data-id="${med.id}" class="delete-btn py-1 px-3 text-sm bg-red-500 text-white rounded-md hover:bg-red-600">Elimina</button>
+                    </div>
+                `;
+                medicinesGrid.appendChild(card);
+            });
+        }
+
+
+        // --- FUNZIONI CRUD (Create, Read, Update, Delete) ---
+        async function fetchMedicines() {
+            if (unsubscribe) unsubscribe(); // Scollega il listener precedente se esiste
+
+            medicinesCollectionRef = collection(db, 'artifacts', appId, 'users', userId, 'medicines');
+            
+            unsubscribe = onSnapshot(medicinesCollectionRef, (snapshot) => {
+                allMedicines = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderMedicines();
+            }, (error) => {
+                console.error("Errore nel ricevere gli aggiornamenti:", error);
+                loadingDiv.innerText = "Errore nel caricamento dei dati.";
+            });
+        }
+
+        async function saveMedicine(e) {
+            e.preventDefault();
+            const id = document.getElementById('medicineId').value;
+            const name = document.getElementById('name').value;
+            const expiryDate = document.getElementById('expiryDate').value;
+            const pathologies = document.getElementById('pathologies').value;
+            const notes = document.getElementById('notes').value;
+            const photoFile = document.getElementById('photo').files[0];
+
+            const medicineData = { name, expiryDate, pathologies, notes };
+
+            // Gestione foto
+            if (photoFile) {
+                medicineData.photo = await toBase64(photoFile);
+            } else if (!id) {
+                // Se è un nuovo medicinale senza foto, non aggiungiamo la proprietà
+            } else {
+                // Se è una modifica e non si cambia foto, manteniamo la vecchia
+                const existingMed = allMedicines.find(m => m.id === id);
+                if (existingMed && existingMed.photo) {
+                    medicineData.photo = existingMed.photo;
+                }
+            }
+            
+            try {
+                if (id) {
+                    // Aggiorna medicinale esistente
+                    const docRef = doc(db, 'artifacts', appId, 'users', userId, 'medicines', id);
+                    await setDoc(docRef, medicineData, { merge: true });
+                } else {
+                    // Aggiungi nuovo medicinale
+                    await addDoc(medicinesCollectionRef, medicineData);
+                }
+                closeModal();
+            } catch (error) {
+                console.error("Errore nel salvataggio del medicinale: ", error);
+                alert("Si è verificato un errore. Riprova.");
+            }
+        }
+
+        async function deleteMedicine(id) {
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', userId, 'medicines', id);
+                await deleteDoc(docRef);
+            } catch (error) {
+                console.error("Errore nell'eliminazione del medicinale: ", error);
+                alert("Si è verificato un errore. Riprova.");
+            }
+        }
+
+        // --- FUNZIONI HELPER ---
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        // --- GESTORI DI EVENTI ---
+        addMedicineBtn.addEventListener('click', () => {
+            modalTitle.textContent = 'Aggiungi Medicinale';
+            openModal();
+        });
+
+        cancelBtn.addEventListener('click', closeModal);
+        medicineModal.addEventListener('click', (e) => {
+            if (e.target === medicineModal) closeModal();
+        });
+
+        medicineForm.addEventListener('submit', saveMedicine);
+
+        document.getElementById('photo').addEventListener('change', (e) => {
+            const preview = document.getElementById('photoPreview');
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        medicinesGrid.addEventListener('click', e => {
+            if (e.target.classList.contains('edit-btn')) {
+                const id = e.target.dataset.id;
+                const med = allMedicines.find(m => m.id === id);
+                if(med){
+                    modalTitle.textContent = 'Modifica Medicinale';
+                    document.getElementById('medicineId').value = med.id;
+                    document.getElementById('name').value = med.name;
+                    document.getElementById('expiryDate').value = med.expiryDate;
+                    document.getElementById('pathologies').value = med.pathologies;
+                    document.getElementById('notes').value = med.notes;
+                    const preview = document.getElementById('photoPreview');
+                    if (med.photo) {
+                        preview.src = med.photo;
+                        preview.classList.remove('hidden');
+                    } else {
+                        preview.classList.add('hidden');
+                    }
+                    openModal();
+                }
+            }
+            if (e.target.classList.contains('delete-btn')) {
+                const id = e.target.dataset.id;
+                deleteConfirmModal.classList.remove('hidden');
+                confirmDeleteBtn.dataset.id = id;
+            }
+        });
+
+        cancelDeleteBtn.addEventListener('click', () => deleteConfirmModal.classList.add('hidden'));
+        deleteConfirmModal.addEventListener('click', (e) => {
+             if (e.target === deleteConfirmModal) deleteConfirmModal.classList.add('hidden');
+        });
+        confirmDeleteBtn.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            if (id) {
+                deleteMedicine(id);
+            }
+            deleteConfirmModal.classList.add('hidden');
+        });
+
+        searchInput.addEventListener('input', renderMedicines);
+
+        sortButtons.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                document.querySelectorAll('.sort-button').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                currentSort = e.target.dataset.sort;
+                renderMedicines();
+            }
+        });
+
+        // --- AVVIO APPLICAZIONE ---
+        async function main() {
+            try {
+                 if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                userId = auth.currentUser.uid;
+                await fetchMedicines();
+
+            } catch (error) {
+                console.error("Autenticazione fallita:", error);
+                loadingDiv.innerText = "Impossibile autenticare l'utente. Ricarica la pagina.";
+            }
+        }
+        
+        main();
+
+    </script>
+
+</body>
+</html>
