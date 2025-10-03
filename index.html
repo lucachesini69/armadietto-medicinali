@@ -210,7 +210,12 @@
         
         function renderMedicines() {
             const searchTerm = searchInput.value.toLowerCase();
-            let filteredMedicines = allMedicines.filter(med => med.name.toLowerCase().includes(searchTerm));
+            let filteredMedicines = allMedicines.filter(med => {
+                const name = (med.name || '').toLowerCase();
+                const pathologies = (med.pathologies || '').toLowerCase();
+                const notes = (med.notes || '').toLowerCase();
+                return name.includes(searchTerm) || pathologies.includes(searchTerm) || notes.includes(searchTerm);
+            });
 
             // Ordinamento
             filteredMedicines.sort((a, b) => {
