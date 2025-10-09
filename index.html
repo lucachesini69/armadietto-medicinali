@@ -353,7 +353,6 @@
                 const dosage = document.getElementById('dosage').value;
                 const notes = document.getElementById('notes').value;
                 const photoFile = document.getElementById('photo').files[0];
-                const leafletFile = document.getElementById('leaflet').files[0];
 
                 const medicineData = { name, expiryDate, pathologies, dosage, notes };
 
@@ -374,26 +373,6 @@
                     const existingMed = allMedicines.find(m => m.id === id);
                     if (existingMed && existingMed.photo) {
                         medicineData.photo = existingMed.photo;
-                    }
-                }
-
-                // Gestione bugiardino
-                if (leafletFile) {
-                    try {
-                        console.log("Inizio conversione bugiardino:", leafletFile.name, leafletFile.size, "bytes");
-                        medicineData.leaflet = await toBase64(leafletFile);
-                        console.log("Bugiardino convertito, dimensione:", medicineData.leaflet.length, "caratteri");
-                    } catch (leafletError) {
-                        console.error("Errore nella conversione del bugiardino:", leafletError);
-                        throw new Error("Errore nel caricamento del bugiardino: " + leafletError.message);
-                    }
-                } else if (!id) {
-                    // Se è un nuovo medicinale senza bugiardino, non aggiungiamo la proprietà
-                } else {
-                    // Se è una modifica e non si cambia bugiardino, manteniamo il vecchio
-                    const existingMed = allMedicines.find(m => m.id === id);
-                    if (existingMed && existingMed.leaflet) {
-                        medicineData.leaflet = existingMed.leaflet;
                     }
                 }
 
@@ -613,26 +592,6 @@ IMPORTANTE: Se il medicinale non è riconosciuto o non sei sicuro, rispondi con 
                 reader.readAsDataURL(file);
             }
         });
-
-        document.getElementById('leaflet').addEventListener('change', (e) => {
-            const preview = document.getElementById('leafletPreview');
-            const analyzeBtn = document.getElementById('analyzeLeafletBtn');
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    preview.src = e.target.result;
-                    preview.classList.remove('hidden');
-                    analyzeBtn.classList.remove('hidden');
-                }
-                reader.readAsDataURL(file);
-            } else {
-                preview.classList.add('hidden');
-                analyzeBtn.classList.add('hidden');
-            }
-        });
-
-        document.getElementById('analyzeLeafletBtn').addEventListener('click', analyzeLeaflet);
 
         medicinesGrid.addEventListener('click', e => {
             if (e.target.classList.contains('edit-btn')) {
