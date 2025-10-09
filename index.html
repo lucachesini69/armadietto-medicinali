@@ -192,6 +192,12 @@
                 medicineForm.reset();
                 document.getElementById('photoPreview').classList.add('hidden');
                 document.getElementById('medicineId').value = '';
+                // Reset del flag di salvataggio
+                isSaving = false;
+                const submitBtn = medicineForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Salva';
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             }, 300);
         }
 
@@ -299,32 +305,53 @@
             });
         }
 
+        let isSaving = false; // Flag per prevenire doppi submit
+
         async function saveMedicine(e) {
             e.preventDefault();
-            const id = document.getElementById('medicineId').value;
-            const name = document.getElementById('name').value;
-            const expiryDate = document.getElementById('expiryDate').value;
-            const pathologies = document.getElementById('pathologies').value;
-            const dosage = document.getElementById('dosage').value;
-            const notes = document.getElementById('notes').value;
-            const photoFile = document.getElementById('photo').files[0];
 
-            const medicineData = { name, expiryDate, pathologies, dosage, notes };
-
-            // Gestione foto
-            if (photoFile) {
-                medicineData.photo = await toBase64(photoFile);
-            } else if (!id) {
-                // Se è un nuovo medicinale senza foto, non aggiungiamo la proprietà
-            } else {
-                // Se è una modifica e non si cambia foto, manteniamo la vecchia
-                const existingMed = allMedicines.find(m => m.id === id);
-                if (existingMed && existingMed.photo) {
-                    medicineData.photo = existingMed.photo;
-                }
+            // Previeni doppi submit
+            if (isSaving) {
+                console.log("Salvataggio già in corso...");
+                return;
             }
-            
+
+            isSaving = true;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Salvataggio...';
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
             try {
+                const id = document.getElementById('medicineId').value;
+                const name = document.getElementById('name').value;
+                const expiryDate = document.getElementById('expiryDate').value;
+                const pathologies = document.getElementById('pathologies').value;
+                const dosage = document.getElementById('dosage').value;
+                const notes = document.getElementById('notes').value;
+                const photoFile = document.getElementById('photo').files[0];
+
+                const medicineData = { name, expiryDate, pathologies, dosage, notes };
+
+                // Gestione foto
+                if (photoFile) {
+                    try {
+                        medicineData.photo = await toBase64(photoFile);
+                    } catch (photoError) {
+                        console.error("Errore nella conversione della foto:", photoError);
+                        throw new Error("Errore nel caricamento della foto");
+                    }
+                } else if (!id) {
+                    // Se è un nuovo medicinale senza foto, non aggiungiamo la proprietà
+                } else {
+                    // Se è una modifica e non si cambia foto, manteniamo la vecchia
+                    const existingMed = allMedicines.find(m => m.id === id);
+                    if (existingMed && existingMed.photo) {
+                        medicineData.photo = existingMed.photo;
+                    }
+                }
+
                 if (id) {
                     // Aggiorna medicinale esistente
                     const docRef = doc(db, 'medicines', id);
@@ -336,7 +363,13 @@
                 closeModal();
             } catch (error) {
                 console.error("Errore nel salvataggio del medicinale: ", error);
-                alert("Si è verificato un errore. Riprova.");
+                alert("Si è verificato un errore: " + error.message + ". Riprova.");
+            } finally {
+                // Ripristina lo stato del pulsante
+                isSaving = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 
