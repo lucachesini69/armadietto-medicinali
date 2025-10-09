@@ -79,7 +79,12 @@
                         <div>
                             <div class="mb-4">
                                 <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nome Medicinale</label>
-                                <input type="text" id="name" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                                <div class="flex gap-2">
+                                    <input type="text" id="name" class="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required>
+                                    <button type="button" id="autoFillBtn" class="py-2 px-4 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 whitespace-nowrap">
+                                        🤖 Compila con AI
+                                    </button>
+                                </div>
                             </div>
                             <div class="mb-4">
                                 <label for="expiryDate" class="block text-sm font-medium text-gray-700 mb-1">Data di Scadenza</label>
@@ -101,17 +106,9 @@
                                 <input type="file" id="photo" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                                 <img id="photoPreview" src="" alt="Anteprima foto" class="mt-2 rounded-md max-h-40 w-full object-contain hidden">
                             </div>
-                            <div class="mb-4">
-                                 <label for="leaflet" class="block text-sm font-medium text-gray-700 mb-1">Foto Bugiardino</label>
-                                <input type="file" id="leaflet" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
-                                <img id="leafletPreview" src="" alt="Anteprima bugiardino" class="mt-2 rounded-md max-h-40 w-full object-contain hidden">
-                                <button type="button" id="analyzeLeafletBtn" class="mt-2 w-full py-2 px-4 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 hidden">
-                                    🤖 Analizza con AI
-                                </button>
-                            </div>
                              <div class="mb-4">
                                 <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Note Aggiuntive</label>
-                                <textarea id="notes" rows="3" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                <textarea id="notes" rows="5" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
                             </div>
                         </div>
                     </div>
@@ -215,8 +212,6 @@
                 medicineModal.classList.add('hidden');
                 medicineForm.reset();
                 document.getElementById('photoPreview').classList.add('hidden');
-                document.getElementById('leafletPreview').classList.add('hidden');
-                document.getElementById('analyzeLeafletBtn').classList.add('hidden');
                 document.getElementById('medicineId').value = '';
                 // Reset del flag di salvataggio
                 isSaving = false;
@@ -438,31 +433,21 @@
 
         // --- FUNZIONI HELPER ---
 
-        // Funzione per analizzare il bugiardino con Gemini AI
-        async function analyzeLeaflet() {
-            const leafletFile = document.getElementById('leaflet').files[0];
-            if (!leafletFile) {
-                alert('Carica prima una foto del bugiardino');
+        // Funzione per auto-compilare i campi cercando info sul medicinale tramite AI
+        async function autoFillWithAI() {
+            const medicineName = document.getElementById('name').value.trim();
+            if (!medicineName) {
+                alert('Inserisci prima il nome del medicinale');
                 return;
             }
 
-            if (GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-                alert('Configura prima la tua API key di Gemini. Ottienila gratuitamente su https://aistudio.google.com/app/apikey');
-                return;
-            }
-
-            const analyzeBtn = document.getElementById('analyzeLeafletBtn');
-            const originalText = analyzeBtn.textContent;
-            analyzeBtn.disabled = true;
-            analyzeBtn.textContent = '🔄 Analisi in corso...';
+            const autoFillBtn = document.getElementById('autoFillBtn');
+            const originalText = autoFillBtn.textContent;
+            autoFillBtn.disabled = true;
+            autoFillBtn.textContent = '🔄 Ricerca...';
 
             try {
-                // Converti l'immagine in base64
-                const base64Image = await toBase64(leafletFile);
-                // Rimuovi il prefisso data:image/...;base64,
-                const base64Data = base64Image.split(',')[1];
-
-                // Chiama l'API di Gemini
+                // Chiama l'API di Gemini per cercare informazioni sul medicinale
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                     method: 'POST',
                     headers: {
@@ -470,26 +455,18 @@
                     },
                     body: JSON.stringify({
                         contents: [{
-                            parts: [
-                                {
-                                    text: `Analizza questa immagine del bugiardino di un medicinale ed estrai le seguenti informazioni in formato JSON:
+                            parts: [{
+                                text: `Sei un esperto farmacista. Fornisci informazioni complete sul medicinale "${medicineName}" in formato JSON. Se il medicinale non esiste o non lo conosci, indica tutti i campi come vuoti.
+
+Rispondi SOLO con questo JSON, senza altri testi:
 {
-  "nome": "nome del medicinale",
-  "patologie": "lista di indicazioni terapeutiche separate da virgola",
-  "dosaggio": "come e quando prendere il medicinale",
-  "scadenza": "data di scadenza se visibile (formato YYYY-MM-DD)",
-  "note": "eventuali avvertenze importanti"
+  "patologie": "lista delle principali indicazioni terapeutiche separate da virgola (es: febbre, dolore, infiammazione)",
+  "dosaggio": "posologia standard consigliata con breve descrizione di come e quando assumerlo",
+  "note": "eventuali avvertenze importanti, controindicazioni principali o effetti collaterali rilevanti"
 }
 
-Se un campo non è visibile o leggibile, lascialo vuoto. Rispondi SOLO con il JSON, senza altri testi.`
-                                },
-                                {
-                                    inline_data: {
-                                        mime_type: leafletFile.type,
-                                        data: base64Data
-                                    }
-                                }
-                            ]
+IMPORTANTE: Se il medicinale non è riconosciuto o non sei sicuro, rispondi con campi vuoti.`
+                            }]
                         }]
                     })
                 });
@@ -508,32 +485,34 @@ Se un campo non è visibile o leggibile, lascialo vuoto. Rispondi SOLO con il JS
                 }
 
                 const extracted = JSON.parse(jsonMatch[0]);
-                console.log('Dati estratti dal bugiardino:', extracted);
+                console.log('Informazioni trovate per', medicineName, ':', extracted);
 
-                // Popola i campi del form
-                if (extracted.nome) {
-                    document.getElementById('name').value = extracted.nome;
-                }
-                if (extracted.patologie) {
+                // Popola i campi del form solo se ci sono informazioni
+                let fieldsFound = false;
+                if (extracted.patologie && extracted.patologie.trim() !== '') {
                     document.getElementById('pathologies').value = extracted.patologie;
+                    fieldsFound = true;
                 }
-                if (extracted.dosaggio) {
+                if (extracted.dosaggio && extracted.dosaggio.trim() !== '') {
                     document.getElementById('dosage').value = extracted.dosaggio;
+                    fieldsFound = true;
                 }
-                if (extracted.scadenza && extracted.scadenza !== '') {
-                    document.getElementById('expiryDate').value = extracted.scadenza;
-                }
-                if (extracted.note) {
+                if (extracted.note && extracted.note.trim() !== '') {
                     document.getElementById('notes').value = extracted.note;
+                    fieldsFound = true;
                 }
 
-                alert('✅ Analisi completata! Controlla i campi compilati.');
+                if (fieldsFound) {
+                    alert('✅ Informazioni trovate! Controlla e modifica se necessario.');
+                } else {
+                    alert('⚠️ Medicinale non riconosciuto o informazioni non disponibili. Compila manualmente i campi.');
+                }
             } catch (error) {
-                console.error('Errore nell\'analisi:', error);
-                alert('Errore nell\'analisi del bugiardino: ' + error.message);
+                console.error('Errore nella ricerca:', error);
+                alert('Errore nella ricerca delle informazioni: ' + error.message);
             } finally {
-                analyzeBtn.disabled = false;
-                analyzeBtn.textContent = originalText;
+                autoFillBtn.disabled = false;
+                autoFillBtn.textContent = originalText;
             }
         }
 
@@ -619,6 +598,8 @@ Se un campo non è visibile o leggibile, lascialo vuoto. Rispondi SOLO con il JS
         });
 
         medicineForm.addEventListener('submit', saveMedicine);
+
+        document.getElementById('autoFillBtn').addEventListener('click', autoFillWithAI);
 
         document.getElementById('photo').addEventListener('change', (e) => {
             const preview = document.getElementById('photoPreview');
