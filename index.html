@@ -136,6 +136,19 @@
         </div>
     </div>
 
+    <!-- Modale visualizzazione bugiardino -->
+    <div id="leafletViewModal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop hidden p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-11/12 max-w-4xl mx-auto max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h3 class="text-xl font-bold">📄 Bugiardino</h3>
+                <button id="closeLeafletViewBtn" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-auto flex-1">
+                <img id="leafletViewImage" src="" alt="Bugiardino" class="w-full h-auto rounded-md">
+            </div>
+        </div>
+    </div>
+
 
     <script type="module">
         // Importa le funzioni necessarie dal SDK di Firebase
@@ -294,6 +307,7 @@
                         </div>` : ''}
                     </div>
                     <div class="p-3 bg-gray-50 flex justify-end gap-2">
+                        ${med.leaflet ? `<button data-id="${med.id}" class="view-leaflet-btn py-1 px-3 text-sm bg-green-500 text-white rounded-md hover:bg-green-600">📄 Bugiardino</button>` : ''}
                         <button data-id="${med.id}" class="edit-btn py-1 px-3 text-sm bg-yellow-400 text-yellow-900 rounded-md hover:bg-yellow-500">Modifica</button>
                         <button data-id="${med.id}" class="delete-btn py-1 px-3 text-sm bg-red-500 text-white rounded-md hover:bg-red-600">Elimina</button>
                     </div>
@@ -666,6 +680,14 @@ Se un campo non è visibile o leggibile, lascialo vuoto. Rispondi SOLO con il JS
                 deleteConfirmModal.classList.remove('hidden');
                 confirmDeleteBtn.dataset.id = id;
             }
+            if (e.target.classList.contains('view-leaflet-btn')) {
+                const id = e.target.dataset.id;
+                const med = allMedicines.find(m => m.id === id);
+                if (med && med.leaflet) {
+                    document.getElementById('leafletViewImage').src = med.leaflet;
+                    document.getElementById('leafletViewModal').classList.remove('hidden');
+                }
+            }
         });
 
         cancelDeleteBtn.addEventListener('click', () => deleteConfirmModal.classList.add('hidden'));
@@ -678,6 +700,15 @@ Se un campo non è visibile o leggibile, lascialo vuoto. Rispondi SOLO con il JS
                 deleteMedicine(id);
             }
             deleteConfirmModal.classList.add('hidden');
+        });
+
+        // Gestione modale visualizzazione bugiardino
+        const leafletViewModal = document.getElementById('leafletViewModal');
+        const closeLeafletViewBtn = document.getElementById('closeLeafletViewBtn');
+
+        closeLeafletViewBtn.addEventListener('click', () => leafletViewModal.classList.add('hidden'));
+        leafletViewModal.addEventListener('click', (e) => {
+            if (e.target === leafletViewModal) leafletViewModal.classList.add('hidden');
         });
 
         searchInput.addEventListener('input', renderMedicines);
