@@ -399,8 +399,8 @@
                     try {
                         console.log("toBase64: immagine caricata, dimensioni originali:", img.width, "x", img.height);
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        const MAX_HEIGHT = 800;
+                        const MAX_WIDTH = 600;
+                        const MAX_HEIGHT = 600;
                         let width = img.width;
                         let height = img.height;
 
@@ -422,10 +422,24 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
 
-                        // Comprimi con qualità 0.8
+                        // Comprimi con qualità progressiva fino a ottenere dimensione accettabile
                         console.log("toBase64: conversione in base64");
-                        const result = canvas.toDataURL('image/jpeg', 0.8);
-                        console.log("toBase64: conversione completata");
+                        let quality = 0.7;
+                        let result = canvas.toDataURL('image/jpeg', quality);
+
+                        // Se ancora troppo grande, riduci la qualità
+                        while (result.length > 1000000 && quality > 0.1) {
+                            quality -= 0.1;
+                            console.log("toBase64: riprovo con qualità", quality);
+                            result = canvas.toDataURL('image/jpeg', quality);
+                        }
+
+                        console.log("toBase64: conversione completata, dimensione finale:", result.length, "bytes, qualità:", quality);
+
+                        if (result.length > 1000000) {
+                            throw new Error("Immagine troppo grande anche dopo compressione");
+                        }
+
                         resolve(result);
                     } catch (err) {
                         console.error("toBase64: errore durante elaborazione:", err);
