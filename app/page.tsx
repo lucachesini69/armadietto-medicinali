@@ -18,6 +18,7 @@ import { useMedicines } from "@/lib/hooks/useMedicines";
 import { useFamily } from "@/lib/hooks/useFamily";
 import { useReminders } from "@/lib/hooks/useReminders";
 import { useDarkMode } from "@/lib/hooks/useDarkMode";
+import { useNotifications } from "@/lib/hooks/useNotifications";
 import type { Medicine } from "@/lib/types";
 
 type View = null | "detail" | "add" | "edit" | "shopping" | "settings";
@@ -33,6 +34,7 @@ export default function MediCasaApp() {
   const { members, addMember, removeMember } = useFamily();
   const { reminders, intakeLog, addReminder, toggleReminder, deleteReminder, logIntake } = useReminders();
   const { isDark, toggle: toggleDark } = useDarkMode();
+  const { permission: notifPermission, requestPermission: requestNotifPermission } = useNotifications(reminders, members);
 
   const showToast = useCallback((message: string) => {
     setToast({ message, visible: true });
@@ -189,6 +191,8 @@ export default function MediCasaApp() {
           isDark={isDark}
           onToggleDark={toggleDark}
           onShowToast={showToast}
+          notifPermission={notifPermission}
+          onRequestNotifPermission={requestNotifPermission}
         />
       );
     }
@@ -235,6 +239,7 @@ export default function MediCasaApp() {
         return (
           <FamilyScreen
             members={members}
+            reminders={reminders}
             onAddMember={handleAddMember}
             onRemoveMember={handleRemoveMember}
           />

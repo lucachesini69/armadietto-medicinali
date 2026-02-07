@@ -9,12 +9,16 @@ interface SettingsScreenProps {
   isDark: boolean;
   onToggleDark: () => void;
   onShowToast: (message: string) => void;
+  notifPermission: NotificationPermission;
+  onRequestNotifPermission: () => Promise<NotificationPermission>;
 }
 
 export function SettingsScreen({
   isDark,
   onToggleDark,
   onShowToast,
+  notifPermission,
+  onRequestNotifPermission,
 }: SettingsScreenProps) {
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -85,6 +89,44 @@ export function SettingsScreen({
                 }}
               />
             </div>
+          </div>
+        </Card>
+
+        {/* Notifications */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[15px] font-bold text-text dark:text-white">
+                Notifiche promemoria
+              </div>
+              <div className="text-[13px] text-text-muted dark:text-white/50">
+                {notifPermission === "granted"
+                  ? "Attive"
+                  : notifPermission === "denied"
+                  ? "Bloccate dal browser"
+                  : "Non attive"}
+              </div>
+            </div>
+            {notifPermission === "granted" ? (
+              <span className="text-success text-[14px] font-bold">Attive</span>
+            ) : notifPermission === "denied" ? (
+              <span className="text-danger text-[13px] font-semibold">Bloccate</span>
+            ) : (
+              <button
+                className="py-2.5 px-4 rounded-xl text-[14px] font-bold text-white border-none"
+                style={{ background: "linear-gradient(135deg, #3A7D6E, #2D6356)" }}
+                onClick={async () => {
+                  const result = await onRequestNotifPermission();
+                  onShowToast(
+                    result === "granted"
+                      ? "Notifiche attivate!"
+                      : "Permesso notifiche negato"
+                  );
+                }}
+              >
+                Attiva
+              </button>
+            )}
           </div>
         </Card>
 

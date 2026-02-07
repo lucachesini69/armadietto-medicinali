@@ -42,6 +42,10 @@ api.txt
 # claude backup
 .claude-bak/
 
+# serwist
+public/sw*
+public/swe-worker*
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
