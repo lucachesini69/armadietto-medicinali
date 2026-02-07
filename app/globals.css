@@ -34,6 +34,43 @@ body {
   overscroll-behavior: none;
 }
 
+/* Dark mode */
+html.dark body {
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  color: #e0e0e0;
+}
+
+html.dark .bg-bg {
+  background-color: #1a1a2e;
+}
+
+html.dark .bg-white,
+html.dark .bg-white\/95 {
+  background-color: #252540;
+}
+
+html.dark .bg-\[\#F7FAF9\] {
+  background-color: #2a2a45;
+}
+
+html.dark .text-text,
+html.dark .text-text-dark {
+  color: #e0e0e0;
+}
+
+html.dark .text-text-secondary {
+  color: #a0a0b0;
+}
+
+html.dark .text-text-muted {
+  color: #808090;
+}
+
+html.dark .border-text\/8,
+html.dark .border-text\/12 {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 /* Scrollbar sottile */
 ::-webkit-scrollbar {
   width: 4px;

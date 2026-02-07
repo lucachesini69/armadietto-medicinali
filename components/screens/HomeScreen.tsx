@@ -47,6 +47,14 @@ export function HomeScreen({
       <Header
         title="🏥 MediCasa"
         subtitle={`${greeting}! Hai ${medicines.length} medicinali`}
+        right={
+          <button
+            className="w-8 h-8 flex items-center justify-center text-text-secondary text-xl bg-transparent border-none cursor-pointer"
+            onClick={() => onNavigate("settings")}
+          >
+            ⚙️
+          </button>
+        }
       />
 
       <div className="px-5 pb-[100px]">

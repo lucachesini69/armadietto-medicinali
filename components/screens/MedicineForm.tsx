@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Pill } from "@/components/ui/Pill";
 import { Header } from "@/components/layout/Header";
+import { BarcodeScanner } from "@/components/ui/BarcodeScanner";
 import { ChevronLeftIcon } from "@/components/icons/Icons";
 import { FORMATS, LOCATIONS, SYMPTOM_CATEGORIES } from "@/lib/constants";
 import { recognizeMedicineFromPhoto } from "@/lib/ai";
@@ -26,10 +27,17 @@ export function MedicineForm({ medicine, onSave, onCancel }: MedicineFormProps) 
     sintomi: medicine?.sintomi ?? ([] as string[]),
     note: medicine?.note ?? "",
     foto: medicine?.foto ?? "",
+    barcode: medicine?.barcode ?? "",
   });
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBarcodeScan = useCallback((code: string) => {
+    setForm((prev) => ({ ...prev, barcode: code }));
+    setShowBarcodeScanner(false);
+  }, []);
 
   const inputClass =
     "w-full py-3 px-3.5 rounded-xl border-[1.5px] border-text/12 text-[15px] bg-[#F7FAF9] text-text outline-none focus:border-primary transition-colors font-[inherit]";
@@ -318,6 +326,35 @@ export function MedicineForm({ medicine, onSave, onCancel }: MedicineFormProps) 
           />
         </div>
 
+        {/* Barcode */}
+        <div className="mb-6">
+          <label className={labelClass}>Codice a barre</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              className={`${inputClass} flex-1`}
+              placeholder="Codice a barre"
+              value={form.barcode}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, barcode: e.target.value }))
+              }
+            />
+            <button
+              type="button"
+              className="py-3 px-4 rounded-xl text-[14px] font-bold text-white border-none shrink-0"
+              style={{ background: "linear-gradient(135deg, #4A90A4, #3A7D94)" }}
+              onClick={() => setShowBarcodeScanner(true)}
+            >
+              Scansiona
+            </button>
+          </div>
+          {form.barcode && (
+            <div className="text-[12px] text-success mt-1.5 font-semibold">
+              Codice: {form.barcode}
+            </div>
+          )}
+        </div>
+
         {/* Save button */}
         <button
           className="w-full py-3.5 px-6 rounded-xl border-none text-[15px] font-bold text-white transition-all disabled:opacity-50"
@@ -328,6 +365,13 @@ export function MedicineForm({ medicine, onSave, onCancel }: MedicineFormProps) 
           {medicine ? "Salva modifiche" : "Aggiungi farmaco"}
         </button>
       </div>
+
+      {showBarcodeScanner && (
+        <BarcodeScanner
+          onScan={handleBarcodeScan}
+          onClose={() => setShowBarcodeScanner(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { TabBar, type TabId } from "@/components/layout/TabBar";
 import { FAB } from "@/components/layout/FAB";
 import { Toast } from "@/components/ui/Toast";
@@ -12,12 +13,14 @@ import { FamilyScreen } from "@/components/screens/FamilyScreen";
 import { RemindersScreen } from "@/components/screens/RemindersScreen";
 import { SearchScreen } from "@/components/screens/SearchScreen";
 import { ShoppingListScreen } from "@/components/screens/ShoppingListScreen";
+import { SettingsScreen } from "@/components/screens/SettingsScreen";
 import { useMedicines } from "@/lib/hooks/useMedicines";
 import { useFamily } from "@/lib/hooks/useFamily";
 import { useReminders } from "@/lib/hooks/useReminders";
+import { useDarkMode } from "@/lib/hooks/useDarkMode";
 import type { Medicine } from "@/lib/types";
 
-type View = null | "detail" | "add" | "edit" | "shopping";
+type View = null | "detail" | "add" | "edit" | "shopping" | "settings";
 
 export default function MediCasaApp() {
   const [tab, setTab] = useState<TabId>("home");
@@ -29,6 +32,7 @@ export default function MediCasaApp() {
   const { medicines, addMedicine, updateMedicine, deleteMedicine, updateQuantity } = useMedicines();
   const { members, addMember, removeMember } = useFamily();
   const { reminders, intakeLog, addReminder, toggleReminder, deleteReminder, logIntake } = useReminders();
+  const { isDark, toggle: toggleDark } = useDarkMode();
 
   const showToast = useCallback((message: string) => {
     setToast({ message, visible: true });
@@ -47,6 +51,8 @@ export default function MediCasaApp() {
   const handleNavigate = useCallback((tabId: string) => {
     if (tabId === "shopping") {
       setView("shopping");
+    } else if (tabId === "settings") {
+      setView("settings");
     } else {
       setView(null);
       setTab(tabId as TabId);
@@ -177,6 +183,16 @@ export default function MediCasaApp() {
       return <ShoppingListScreen medicines={medicines} onBack={handleBack} />;
     }
 
+    if (view === "settings") {
+      return (
+        <SettingsScreen
+          isDark={isDark}
+          onToggleDark={toggleDark}
+          onShowToast={showToast}
+        />
+      );
+    }
+
     switch (tab) {
       case "home":
         return (
@@ -230,10 +246,33 @@ export default function MediCasaApp() {
 
   const showFab = !view && (tab === "inventario" || tab === "home");
 
+  const viewKey = view ?? tab;
+
   return (
     <div className="max-w-[430px] mx-auto relative min-h-dvh overflow-hidden">
-      {renderContent()}
-      {showFab && <FAB onClick={() => setView("add")} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={viewKey}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+        >
+          {renderContent()}
+        </motion.div>
+      </AnimatePresence>
+      <AnimatePresence>
+        {showFab && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "backOut" }}
+          >
+            <FAB onClick={() => setView("add")} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       {!view && <TabBar tab={tab} setTab={setTab} />}
       <Toast message={toast.message} visible={toast.visible} onHide={hideToast} />
     </div>
