@@ -9,11 +9,15 @@ import { InventoryScreen } from "@/components/screens/InventoryScreen";
 import { MedicineDetail } from "@/components/screens/MedicineDetail";
 import { MedicineForm } from "@/components/screens/MedicineForm";
 import { FamilyScreen } from "@/components/screens/FamilyScreen";
+import { RemindersScreen } from "@/components/screens/RemindersScreen";
+import { SearchScreen } from "@/components/screens/SearchScreen";
+import { ShoppingListScreen } from "@/components/screens/ShoppingListScreen";
 import { useMedicines } from "@/lib/hooks/useMedicines";
 import { useFamily } from "@/lib/hooks/useFamily";
+import { useReminders } from "@/lib/hooks/useReminders";
 import type { Medicine } from "@/lib/types";
 
-type View = null | "detail" | "add" | "edit";
+type View = null | "detail" | "add" | "edit" | "shopping";
 
 export default function MediCasaApp() {
   const [tab, setTab] = useState<TabId>("home");
@@ -24,6 +28,7 @@ export default function MediCasaApp() {
 
   const { medicines, addMedicine, updateMedicine, deleteMedicine, updateQuantity } = useMedicines();
   const { members, addMember, removeMember } = useFamily();
+  const { reminders, intakeLog, addReminder, toggleReminder, deleteReminder, logIntake } = useReminders();
 
   const showToast = useCallback((message: string) => {
     setToast({ message, visible: true });
@@ -40,7 +45,12 @@ export default function MediCasaApp() {
   }, []);
 
   const handleNavigate = useCallback((tabId: string) => {
-    setTab(tabId as TabId);
+    if (tabId === "shopping") {
+      setView("shopping");
+    } else {
+      setView(null);
+      setTab(tabId as TabId);
+    }
   }, []);
 
   const handleBack = useCallback(() => {
@@ -63,7 +73,6 @@ export default function MediCasaApp() {
 
   const handleUpdateQuantity = useCallback(async (id: string, delta: number) => {
     await updateQuantity(id, delta);
-    // Update selected medicine locally for immediate feedback
     setSelectedMedicine((prev) => {
       if (!prev || prev.id !== id) return prev;
       return { ...prev, quantita: Math.max(0, prev.quantita + delta) };
@@ -72,15 +81,12 @@ export default function MediCasaApp() {
 
   const handleSave = useCallback(async (data: Partial<Medicine> & { name: string; scadenza: string }) => {
     if (editingMedicine) {
-      // Editing existing
       await updateMedicine(editingMedicine.id, data);
-      // Refresh selected medicine
       setSelectedMedicine((prev) => prev ? { ...prev, ...data } : prev);
       setView("detail");
       setEditingMedicine(null);
       showToast("Farmaco aggiornato");
     } else {
-      // Adding new
       await addMedicine({
         name: data.name,
         principioAttivo: data.principioAttivo ?? "",
@@ -108,6 +114,33 @@ export default function MediCasaApp() {
     await removeMember(id);
     showToast("Membro rimosso");
   }, [removeMember, showToast]);
+
+  // Reminders handlers
+  const handleAddReminder = useCallback(async (data: { medicineId: string; medicineName: string; memberId: string; orario: string; frequenza: string; attivo: boolean }) => {
+    await addReminder({
+      medicineId: data.medicineId,
+      medicineName: data.medicineName,
+      memberId: data.memberId,
+      orario: data.orario,
+      frequenza: data.frequenza as "Ogni giorno" | "Ogni 8 ore" | "Ogni 12 ore" | "Al bisogno" | "Lun-Ven" | "1 volta/settimana",
+      attivo: data.attivo,
+    });
+    showToast("Promemoria aggiunto");
+  }, [addReminder, showToast]);
+
+  const handleToggleReminder = useCallback(async (id: string) => {
+    await toggleReminder(id);
+  }, [toggleReminder]);
+
+  const handleDeleteReminder = useCallback(async (id: string) => {
+    await deleteReminder(id);
+    showToast("Promemoria eliminato");
+  }, [deleteReminder, showToast]);
+
+  const handleLogIntake = useCallback(async (reminderId: string, memberId: string, medicineName: string, skipped: boolean) => {
+    await logIntake(reminderId, memberId, medicineName, skipped);
+    showToast(skipped ? "Assunzione saltata" : "Assunzione registrata");
+  }, [logIntake, showToast]);
 
   // Render content
   const renderContent = () => {
@@ -140,12 +173,16 @@ export default function MediCasaApp() {
       );
     }
 
+    if (view === "shopping") {
+      return <ShoppingListScreen medicines={medicines} onBack={handleBack} />;
+    }
+
     switch (tab) {
       case "home":
         return (
           <HomeScreen
             medicines={medicines}
-            reminders={[]}
+            reminders={reminders}
             members={members}
             onNavigate={handleNavigate}
             onSelectMedicine={handleSelectMedicine}
@@ -160,19 +197,23 @@ export default function MediCasaApp() {
         );
       case "promemoria":
         return (
-          <div className="px-5 pt-20 pb-[100px] text-center text-text-muted">
-            <div className="text-5xl mb-3">{"\u23F0"}</div>
-            <div className="font-semibold text-base mb-1">Promemoria</div>
-            <div className="text-sm">Disponibile nella Fase 2</div>
-          </div>
+          <RemindersScreen
+            reminders={reminders}
+            medicines={medicines}
+            members={members}
+            intakeLog={intakeLog}
+            onAddReminder={handleAddReminder}
+            onToggleReminder={handleToggleReminder}
+            onDeleteReminder={handleDeleteReminder}
+            onLogIntake={handleLogIntake}
+          />
         );
       case "cerca":
         return (
-          <div className="px-5 pt-20 pb-[100px] text-center text-text-muted">
-            <div className="text-5xl mb-3">{"\u{1F50D}"}</div>
-            <div className="font-semibold text-base mb-1">Cerca per sintomo</div>
-            <div className="text-sm">Disponibile nella Fase 2</div>
-          </div>
+          <SearchScreen
+            medicines={medicines}
+            onSelectMedicine={handleSelectMedicine}
+          />
         );
       case "famiglia":
         return (

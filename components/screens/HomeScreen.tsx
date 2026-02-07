@@ -36,6 +36,10 @@ export function HomeScreen({
     );
   }, [medicines]);
 
+  const activeReminders = useMemo(() => {
+    return reminders.filter((r) => r.attivo);
+  }, [reminders]);
+
   const greeting = getGreeting();
 
   return (
@@ -134,6 +138,64 @@ export function HomeScreen({
           </Card>
         )}
 
+        {/* Today's Reminders */}
+        {activeReminders.length > 0 && (
+          <Card
+            gradient="linear-gradient(135deg, #F0F4FF, #E8EEFF)"
+            className="!mb-4"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">⏰</span>
+              <h2 className="text-[15px] font-bold text-text-dark">
+                Promemoria di oggi
+              </h2>
+              <span className="ml-auto text-[12px] font-bold text-info bg-info/10 px-2 py-0.5 rounded-full">
+                {activeReminders.length}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {activeReminders.slice(0, 4).map((reminder) => {
+                const member = members.find((m) => m.id === reminder.memberId);
+                return (
+                  <div
+                    key={reminder.id}
+                    className="flex items-center justify-between bg-white/60 rounded-xl px-3 py-2.5"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14px] font-semibold text-text-dark truncate">
+                        {reminder.medicineName}
+                      </div>
+                      <div className="text-[12px] text-text-muted mt-0.5">
+                        <span
+                          className="font-semibold"
+                          style={{ color: member?.color ?? "#6B7F76" }}
+                        >
+                          {member?.name ?? "—"}
+                        </span>
+                        {" · "}
+                        {reminder.orario}
+                      </div>
+                    </div>
+                    <span className="text-[12px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      {reminder.frequenza}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {activeReminders.length > 4 && (
+              <button
+                className="mt-2 text-[13px] font-semibold text-info bg-transparent border-none cursor-pointer"
+                onClick={() => onNavigate("promemoria")}
+              >
+                Vedi tutti ({activeReminders.length})
+              </button>
+            )}
+          </Card>
+        )}
+
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3 mt-2">
           <Card
@@ -159,6 +221,32 @@ export function HomeScreen({
             </span>
             <span className="text-[12px] text-text-muted mt-0.5">
               Per sintomo o nome
+            </span>
+          </Card>
+
+          <Card
+            className="!mb-0 flex flex-col items-center justify-center py-5"
+            onClick={() => onNavigate("promemoria")}
+          >
+            <span className="text-3xl mb-2">⏰</span>
+            <span className="text-[14px] font-semibold text-text-dark">
+              Promemoria
+            </span>
+            <span className="text-[12px] text-text-muted mt-0.5">
+              {activeReminders.length} attivi
+            </span>
+          </Card>
+
+          <Card
+            className="!mb-0 flex flex-col items-center justify-center py-5"
+            onClick={() => onNavigate("shopping")}
+          >
+            <span className="text-3xl mb-2">🛒</span>
+            <span className="text-[14px] font-semibold text-text-dark">
+              Lista spesa
+            </span>
+            <span className="text-[12px] text-text-muted mt-0.5">
+              Da ricomprare
             </span>
           </Card>
         </div>
